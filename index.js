@@ -7,7 +7,8 @@ const path = require("path")
 //Solicitar de los servicios AWS s3
 const{
   S3Client,
-  PutObjectCommand
+  PutObjectCommand,
+  ListObjectsV2Command
 }= require("@aws-sdk/client-s3")
 
 
@@ -30,6 +31,7 @@ const upload = multer({
 })
 
 //Cliente s3
+//forcePathStyle:true (modo de compatibilidad)
 const s3Client = new S3Client({
   region: process.env.AWS_REGION,
   endpoint: process.env.AWS_ENDPOINT_URL,
@@ -47,6 +49,11 @@ app.use(express.static(path.join(__dirname, "public")))
 //Ruta
 app.get("/" , (req , res)=>{
   res.sendFile(path.join(__dirname , "public" , "index.html"))
+})
+
+//Ruta para listar => http://localhost:300/lista
+app.get("/lista" , (req,res)=>{
+  res.sendFile(path.join(__dirname, "public" , "lista.html"))
 })
 
 //Ruta para subir archivos
@@ -96,6 +103,49 @@ app.post('/upload',upload.single("archivo") ,async(req , res)=>{
     res.status(500).json({
       success: false,
       message:'Nose pudo subir el archivo',
+      error:e.message
+    })
+  }
+})
+
+//Nueva operacion(Lectura des AWS S3)
+app.get("/api/archivos" ,async(req, res)=>{
+  try{
+    //cOMANDO PARA LEER LOS ARCHIVOS
+    const command = new ListObjectsV2Command({
+      Bucket:BUCKET,
+      Prefix:PREFIX,
+    }) 
+
+    const data = await s3Client.send(command)
+
+    //Si no existe los archivos
+    //1() : Retorna una arreglo incluso si no existe archivos
+    //2() : Filtra la coleccion
+    //3() : Retorna los datos ya filtrados
+    const archivos = (data.Contents || [])
+      .filter(objeto =>objeto.Key  !== PREFIX)
+      .map(objeto => ({
+        nombre: objeto.Key.replace(PREFIX, ""),
+        key: objeto.Key,
+        tamano: objeto.Size,
+        fecha: objeto.LastModified
+      }))
+
+      //Retornamos los datos
+      res.json({
+        success: true,
+        bucket: BUCKET,
+        prefijo: PREFIX,
+        total: archivos.length,
+        archivos:archivos
+      })
+
+  }catch(e){
+    console.error(`Error al listar archivos:` ,e)
+    res.status(500).json({
+      success: false,
+      message:`No se puede acceder a los archivos`,
       error:e.message
     })
   }
