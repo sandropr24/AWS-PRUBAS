@@ -1,11 +1,69 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Archivos</title>
+<link rel="stylesheet" href="/estilos.css">
 </head>
 <body>
-  
+<main>
+  <nav><a href="/">Subir</a><a href="/lista">Archivos</a></nav>
+  <h1>Archivos</h1>
+  <div id="lista" class="tarjeta"></div>
+</main>
+
+<script>
+let archivos = [];   // lista que llega del servidor
+
+// 1. Pedir la lista al servidor y mostrarla
+async function cargar() {
+  const lista = document.getElementById('lista');
+  lista.textContent = 'Cargando…';
+
+  try {
+    const respuesta = await fetch('/api/archivos');
+    archivos = (await respuesta.json()).archivos;
+  } catch (e) {
+    lista.textContent = 'No se pudo cargar la lista.';
+    return;
+  }
+
+  if (archivos.length === 0) { lista.textContent = 'No hay archivos subidos.'; return; }
+
+  lista.innerHTML = '';
+  archivos.forEach((a, i) => {
+    const fila = document.createElement('div');
+    fila.className = 'fila';
+    fila.innerHTML =
+      '<span class="nombre"></span>' +
+      '<span class="dato"></span>' +
+      '<span class="dato"></span>' +
+      '<button onclick="descargar(' + i + ')">Descargar</button>' +
+      '<button class="borrar" onclick="eliminar(' + i + ')">Eliminar</button>';
+
+    const textos = fila.querySelectorAll('span');
+    textos[0].textContent = a.nombre;
+    textos[1].textContent = Math.round(a.tamano / 1024) + ' KB';
+    textos[2].textContent = new Date(a.fecha).toLocaleDateString('es-PE');
+    lista.appendChild(fila);
+  });
+}
+
+// 2. Descargar
+function descargar(i) {
+  window.location.href = '/api/archivos/descargar?key=' + encodeURIComponent(archivos[i].key);
+}
+
+// 3. Eliminar
+async function eliminar(i) {
+  if (!confirm('¿Eliminar ' + archivos[i].nombre + '?')) return;
+  const respuesta = await fetch('/api/archivos?key=' + encodeURIComponent(archivos[i].key), { method: 'DELETE' });
+  if (!respuesta.ok) { alert('No se pudo eliminar'); return; }
+  cargar();
+}
+
+cargar();
+</script>
 </body>
 </html>

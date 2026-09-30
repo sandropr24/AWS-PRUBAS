@@ -1,16 +1,47 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subir archivos</title>
+<link rel="stylesheet" href="/estilos.css">
 </head>
 <body>
-  <h1>Subir archivos AWS S3</h1>
-  <form action="/upload" method="POST" enctype="multipart/form-data">
-    <label for="">Seleccionar archivo</label>
-    <input type="file" id="archivo" name="archivo" required>
-    <button type="submit">Enviar</button>
+<main>
+  <nav><a href="/">Subir</a><a href="/lista">Archivos</a></nav>
+  <h1>Subir archivo</h1>
+
+  <form id="formulario" class="tarjeta">
+    <input type="file" name="archivo" required>
+    <button type="submit" id="boton">Subir</button>
+    <p id="mensaje"></p>
   </form>
+</main>
+
+<script>
+const formulario = document.getElementById('formulario');
+const boton = document.getElementById('boton');
+const mensaje = document.getElementById('mensaje');
+
+formulario.addEventListener('submit', async (evento) => {
+  evento.preventDefault();             // no salir de la página
+  boton.disabled = true;
+  mensaje.textContent = 'Subiendo…';
+  mensaje.className = '';
+
+  try {
+    const respuesta = await fetch('/upload', { method: 'POST', body: new FormData(formulario) });
+    const datos = await respuesta.json();
+    if (!datos.success) throw new Error(datos.message);
+    mensaje.textContent = 'Archivo subido correctamente.';
+    mensaje.className = 'ok';
+    formulario.reset();
+  } catch (e) {
+    mensaje.textContent = 'No se pudo subir: ' + e.message;
+    mensaje.className = 'error';
+  }
+  boton.disabled = false;
+});
+</script>
 </body>
 </html>

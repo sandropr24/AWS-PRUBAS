@@ -1,0 +1,15 @@
+body { font-family: system-ui, sans-serif; background: #f4f6fa; color: #1d2733; margin: 0; padding: 40px 16px; }
+main { max-width: 700px; margin: 0 auto; }
+nav a { margin-right: 16px; color: #2f6bff; text-decoration: none; font-weight: 600; }
+.tarjeta { background: white; border: 1px solid #e2e7ef; border-radius: 10px; padding: 20px; }
+
+button { background: #2f6bff; color: white; border: 0; border-radius: 6px; padding: 8px 14px; cursor: pointer; }
+.borrar { background: #d43c2f; }
+
+.fila { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #e2e7ef; }
+.fila:last-child { border-bottom: 0; }
+.nombre { flex: 1; font-weight: 600; }
+.dato { color: #66748b; font-size: 14px; }
+
+.ok { color: #1e7a46; }
+.error { color: #d43c2f; }

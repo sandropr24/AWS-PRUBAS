@@ -8,8 +8,17 @@ const path = require("path")
 const{
   S3Client,
   PutObjectCommand,
-  ListObjectsV2Command
+  ListObjectsV2Command,
+  GetObjectCommand,
+  DeleteObjectCommand
 }= require("@aws-sdk/client-s3")
+
+//DynamoDB - Servicio BD NoSQL
+
+const{
+  DynamoDBClient,
+  PutItemCommand
+} = require("@aws-sdk/client-dynamodb")
 
 
 //Cargar la variables de entornos
@@ -43,6 +52,16 @@ const s3Client = new S3Client({
   forcePathStyle:true
 })
 
+//Cliente DynamoDB
+const dynamoCliente = new DynamoDBClient({
+  region: process.env.AWS_REGION,
+  endpoint: process.env.AWS_ENDPOINT_URL,
+  credentials:{
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
+})
+
 //Archivo estatico aplicacion = Fronted
 app.use(express.static(path.join(__dirname, "public")))
 
@@ -55,6 +74,10 @@ app.get("/" , (req , res)=>{
 app.get("/lista" , (req,res)=>{
   res.sendFile(path.join(__dirname, "public" , "lista.html"))
 })
+
+//Cuando el clinete suba un archivo , se utilizara 2 servecios
+//S3        : Aloja el archivo binario
+//DynamoDb  : Almacena los metadatos
 
 //Ruta para subir archivos
 app.post('/upload',upload.single("archivo") ,async(req , res)=>{
@@ -89,6 +112,26 @@ app.post('/upload',upload.single("archivo") ,async(req , res)=>{
     await s3Client.send(command)
 
     console.log(`Archivo subido: ${key}`)
+
+    //Tambien ... utilizaremos el DynamoDB
+
+    const id = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}` 
+    const dynamoCommand = new PutItemCommand({
+      TableName: process.env.AWS_DYNAMODB_TABLE,
+      Item: {
+        id: {S:id},
+	  nombre: {S:fileName},
+	    tipo: {S:req.file.mimetype},
+	  tamano: {N:req.file.size.toString()},
+	   fecha: {S: new Date().toISOString()},
+	   s3Key: {S:key}
+      }
+    })
+
+    await dynamoCliente.send(dynamoCommand);
+    console.log(`Metadatos guardados en DynamoDB con ID: ${id}`);
+
+
 
     res.json({
       success: true,
@@ -148,6 +191,56 @@ app.get("/api/archivos" ,async(req, res)=>{
       message:`No se puede acceder a los archivos`,
       error:e.message
     })
+  }
+})
+
+
+//Descargar: S3 entrega el archivo y el servidor se lo pasa al navegador
+app.get("/api/archivos/descargar", async(req, res)=>{
+  try{
+    const key = req.query.key
+
+    //Solo permitir archivos dentro de nuestra carpeta (PREFIX)
+    if(!key || !key.startsWith(PREFIX)){
+      return res.status(400).json({ success:false, message:"key invalida" })
+    }
+
+    const archivo = await s3Client.send(new GetObjectCommand({
+      Bucket: BUCKET,
+      Key: key
+    }))
+
+    const nombre = key.replace(PREFIX, "")
+    res.setHeader("Content-Type", archivo.ContentType || "application/octet-stream")
+    res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(nombre)}`)
+    archivo.Body.pipe(res)
+
+  }catch(e){
+    console.error("Error al descargar:", e)
+    res.status(500).json({ success:false, message:"No se pudo descargar", error:e.message })
+  }
+})
+
+//Eliminar: borra el archivo de S3
+app.delete("/api/archivos", async(req, res)=>{
+  try{
+    const key = req.query.key
+
+    if(!key || !key.startsWith(PREFIX)){
+      return res.status(400).json({ success:false, message:"key invalida" })
+    }
+
+    await s3Client.send(new DeleteObjectCommand({
+      Bucket: BUCKET,
+      Key: key
+    }))
+
+    console.log(`Archivo eliminado: ${key}`)
+    res.json({ success:true })
+
+  }catch(e){
+    console.error("Error al eliminar:", e)
+    res.status(500).json({ success:false, message:"No se pudo eliminar", error:e.message })
   }
 })
 

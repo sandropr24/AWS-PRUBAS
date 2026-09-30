@@ -1,7 +1,7 @@
 {
   "name": "consume-aws",
   "version": "1.0.0",
-  "description": "",
+  "description": "Guía de configuración de un entorno local que simula servicios AWS (S3, DynamoDB, Lambda, API Gateway, SQS, IAM) usando **Floci** sobre Docker, y una app web Node.js/Express que consume S3.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -9,9 +9,18 @@
   "keywords": [],
   "type": "commonjs",
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1144.0",
     "@aws-sdk/client-s3": "^3.1138.0",
     "dotenv": "^18.0.3",
     "express": "^5.2.1",
     "multer": "^2.4.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sandropr24/AWS-PRUBAS.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sandropr24/AWS-PRUBAS/issues"
+  },
+  "homepage": "https://github.com/sandropr24/AWS-PRUBAS#readme"
 }
